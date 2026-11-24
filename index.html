@@ -1347,13 +1347,17 @@
             const pred = "DISKUALIFIKASI (Pelanggaran Berat)";
             const predColor = "bg-red-600 text-white";
             
+            // Array detail skor 0 untuk semua soal karena diskualifikasi
+            const detailSkor = dbQuestions.map(q => 0);
+
             // Simpan ke Data Hasil
             const resultData = {
                 timestamp: new Date().toLocaleString('id-ID'),
                 nama: examState.student.name,
                 kelas: examState.student.kelas,
                 skor: finalScore,
-                violations: examState.violations
+                violations: examState.violations,
+                detail: detailSkor
             };
             dbResults.push(resultData);
             localStorage.setItem('cbt_sas_results', JSON.stringify(dbResults));
@@ -1441,11 +1445,14 @@
             // Calculate Score (PG + BS_TABLE proporsional per pernyataan)
             let scoreAuto = 0;
             let maxAuto = 0;
+            let detailSkor = [];
             
             dbQuestions.forEach(q => {
+                let qScore = 0;
                 if(q.type === 'PG') {
                     maxAuto += q.weight;
                     if(examState.answers[q.id] === q.answer) {
+                        qScore = q.weight;
                         scoreAuto += q.weight;
                     }
                 } else if (q.type === 'BS_TABLE') {
@@ -1455,8 +1462,12 @@
                     q.statements.forEach(stmt => {
                         if (ansObj[stmt.no] === stmt.answer) correctCount++;
                     });
-                    scoreAuto += (correctCount / q.statements.length) * q.weight;
+                    qScore = (correctCount / q.statements.length) * q.weight;
+                    scoreAuto += qScore;
+                } else if (q.type === 'URAIAN') {
+                    qScore = "Uraian"; // Tandai sebagai uraian (dinilai manual oleh guru)
                 }
+                detailSkor.push(qScore);
             });
 
             let finalScore = maxAuto > 0 ? Math.round((scoreAuto / maxAuto) * 100) : 0;
@@ -1475,7 +1486,8 @@
                 nama: examState.student.name,
                 kelas: examState.student.kelas,
                 skor: finalScore,
-                violations: examState.violations
+                violations: examState.violations,
+                detail: detailSkor
             };
             dbResults.push(resultData);
             localStorage.setItem('cbt_sas_results', JSON.stringify(dbResults));
